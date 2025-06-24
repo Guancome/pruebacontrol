@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control del Archivos</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f5f5f5;
+            --dark-text: #333;
+            --gray-text: #7f8c8d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        h1 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        #saveBtn:not(:disabled) {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+        
+        .year-group {
+            margin-bottom: 25px;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 15px;
+            transition: all 0.3s;
+        }
+        
+        .year-header {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .year-header:hover {
+            background: #bbdefb;
+        }
+        
+        .year-summary {
+            font-size: 14px;
+            color: var(--gray-text);
+        }
+        
+        .folder {
+            margin: 10px 0 10px 20px;
+            border-radius: 5px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .folder-23digits {
+            background-color: #e3f2fd;
+            margin-bottom: 15px;
+            border-left: 4px solid #1e88e5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .last-folder {
+            background-color: #f5f5f5;
+            margin: 8px 0;
+            border-left: 3px solid #90caf9;
+            transition: transform 0.2s;
+        }
+        
+        .last-folder:hover {
+            transform: translateX(3px);
+        }
+        
+        .folder-header {
+            padding: 12px 15px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .folder-header-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        .folder-name {
+            flex-grow: 1;
+        }
+        
+        .folder-completed {
+            background-color: #e8f5e9 !important;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .folder-incomplete {
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .folder-pending {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .folder-files {
+            padding: 0;
+            margin: 0;
+            display: none;
+        }
+        
+        .file-item {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            position: relative;
+            transition: background 0.2s;
+        }
+        
+        .file-item:hover {
+            background-color: #f0f7ff !important;
+        }
+        
+        .file-item:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .status-checkbox {
+            margin-right: 15px;
+            cursor: pointer;
+            transform: scale(1.2);
+        }
+        
+        .status-checkbox:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status-checkbox:disabled:checked {
+            opacity: 1;
+        }
+        
+        .file-name {
+            flex-grow: 1;
+            word-break: break-word;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        
+        .file-status {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .status-pending {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .status-reviewed {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .status-approved {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .folder-summary {
+            font-size: 14px;
+            color: var(--gray-text);
+        }
+        
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        .login-form input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .user-info {
+            background: #e3f2fd;
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #saveBtn {
+            background: var(--success-color);
+        }
+        
+        #saveBtn:hover {
+            background: #219653;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .folder-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        
+        .folder-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: rgba(52, 152, 219, 0.1);
+            transition: all 0.2s;
+        }
+        
+        .folder-checkbox-label:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+        
+        #searchInput {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+            max-width: 300px;
+            transition: all 0.3s;
+        }
+        
+        #searchInput:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .no-results-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--danger-color);
+            font-weight: bold;
+            display: none;
+        }
+        
+        .global-progress {
+            margin: 15px 0;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .progress-bars {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            gap: 15px;
+        }
+        
+        .progress-bar-container {
+            flex: 1;
+        }
+        
+        .progress-bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .progress-bar {
+            background: #ecf0f1;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        
+        #reviewedBar {
+            background: var(--primary-color);
+        }
+        
+        #approvedBar {
+            background: var(--success-color);
+        }
+        
+        #sortSelect {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+        }
+        
+        #sortSelect:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .no-permission {
+            color: var(--danger-color);
+            font-size: 12px;
+            margin-left: 10px;
+            font-style: italic;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .filter-btn.active {
+            background: var(--primary-color);
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: var(--success-color);
+            color: white;
+            border-radius: 4px;
+            z-index: 1000;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+            color: transparent !important;
+        }
+        
+        @keyframes shimmer {
+            to { background-position: -200% 0; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            #searchInput, #sortSelect {
+                max-width: 100%;
+                width: 100%;
+            }
+            
+            .progress-bars {
+                flex-direction: column;
+            }
+            
+            .progress-bar-container {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .file-item {
+                flex-wrap: wrap;
+            }
+            
+            .file-status {
+                margin-top: 5px;
+                width: 100%;
+            }
+            
+            .folder-actions {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            #mobileFilterBtn {
+                display: block !important;
+            }
+            
+            .filter-buttons {
+                display: none;
+                flex-direction: column;
+            }
+        }
+/* Estilos mejorados para filtros por año */
+.year-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+    width: 100%;
+}
+
+.filter-label {
+    font-weight: bold;
+    color: var(--dark-text);
+    margin-right: 5px;
+}
+
+.year-btn {
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+    color: var(--dark-text);
+}
+
+.year-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.year-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.year-btn:first-of-type {
+    background: #495057;
+    color: white;
+    border-color: #495057;
+}
+    </style>
+</head>
+<body>
+    <div id="loginContainer" class="login-container">
+        <h2>Iniciar Sesión</h2>
+        <div class="login-form">
+            <input type="email" id="email" placeholder="Correo electrónico" required>
+            <input type="password" id="password" placeholder="Contraseña" required>
+            <button onclick="login()">Ingresar</button>
+        </div>
+    </div>
+
+    <div id="appContainer" class="container" style="display: none;">
+        <div class="user-info">
+            <span id="userEmail"></span>
+            <span id="userRoleBadge" style="font-weight:bold; padding:3px 8px; border-radius:4px;"></span>
+            <button onclick="logout()">Cerrar sesión</button>
+        </div>
+        
+        <h1>Control de Documentos Juzgado 3 Penal Municipal</h1>
+        
+        <div class="controls">
+            <input type="file" id="directoryInput" webkitdirectory directory multiple style="display: none;">
+            <button id="directoryBtn" onclick="document.getElementById('directoryInput').click()">📂 Seleccionar Carpeta</button>
+            <button id="saveBtn" onclick="saveAllChanges()" disabled>💾 Guardar Cambios</button>
+            <input type="text" id="searchInput" placeholder="🔍 Buscar carpeta o archivo..." oninput="filterFolders(this.value)">
+            <select id="sortSelect" onchange="sortFolders(this.value)">
+                <option value="name">Ordenar por: Nombre</option>
+                <option value="reviewed">% Revisado</option>
+                <option value="approved">% Aprobado</option>
+            </select>
+            <span id="loadingIndicator" style="display: none;"><span class="loading"></span>Cargando estados...</span>
+        </div>
+<!-- Dentro de <div class="controls">, añade esto antes del cierre </div> -->
+<div class="year-filters">
+    <span class="filter-label">Filtrar por año:</span>
+    <button class="year-btn active" onclick="filterByYear('all')">Todos</button>
+    <div id="yearButtonsContainer"></div>
+</div>
+        
+        <button id="mobileFilterBtn" style="display:none;" onclick="toggleMobileFilters()">☰ Filtros</button>
+        <div class="filter-buttons">
+            <button id="filterAll" class="filter-btn active" onclick="filterByStatus('all')">Todas</button>
+            <button id="filterPending" class="filter-btn" onclick="filterByStatus('pending')">Pendientes</button>
+            <button id="filterReviewed" class="filter-btn" onclick="filterByStatus('reviewed')">Revisadas</button>
+            <button id="filterApproved" class="filter-btn" onclick="filterByStatus('approved')">Aprobadas</button>
+        </div>
+        
+        <div class="global-progress">
+            <h3>Progreso General</h3>
+            <div class="progress-bars">
+                <div class="progress-bar-container">
+                    <div class="progress-bar-label">
+                        <span>Revisado:</span>
+                        <span id="totalReviewed">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="reviewedBar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-label">
+                        <span>Aprobado:</span>
+                        <span id="totalApproved">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="approvedBar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="foldersContainer"></div>
+        <div id="noResultsMessage" class="no-results-message">No se encontraron carpetas o archivos que coincidan con la búsqueda.</div>
+        
+        <div class="action-buttons">
+            <button onclick="exportToCSV()" title="Exportar a Excel">📤 Exportar a CSV</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+  apiKey: "AIzaSyAbozH6wJXiUktYFJNNDriIRssmJd8PAwg",
+  authDomain: "sgdej3pma.firebaseapp.com",
+  projectId: "sgdej3pma",
+  storageBucket: "sgdej3pma.firebasestorage.app",
+  messagingSenderId: "886530400413",
+  appId: "1:886530400413:web:ab03e65b702e137efbf474",
+  measurementId: "G-EPJQ85N5PT"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Variables globales
+        let currentDirectoryFiles = [];
+        let unsubscribeFileStates = null;
+        let unsavedChanges = false;
+        let localChanges = {};
+        let currentUserRole = null;
+        let currentFilterStatus = 'all';
+        let searchTimeout = null;
+
+        // Mostrar notificación
+        function showNotification(message, type = 'success') {
+            const colors = {
+                success: '#2ecc71',
+                error: '#e74c3c',
+                info: '#3498db'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notification.style.background = colors[type] || colors.info;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Alternar filtros en móvil
+        function toggleMobileFilters() {
+            const filters = document.querySelector('.filter-buttons');
+            filters.style.display = filters.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Sistema de autenticación
+        async function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!email || !password) {
+                showNotification('Por favor complete todos los campos', 'error');
+                return;
+            }
+            
+            try {
+                const { user } = await auth.signInWithEmailAndPassword(email, password);
+                const userDoc = await db.collection('users').doc(user.email).get();
+                
+                if (!userDoc.exists) {
+                    throw new Error("No tienes asignado un rol. Contacta al administrador.");
+                }
+                
+                currentUserRole = userDoc.data().role;
+                updateUserRoleBadge();
+                initApp();
+                
+                // Mostrar solo las carpetas relevantes según el rol
+                filterFoldersByRole();
+                showNotification('Sesión iniciada correctamente');
+                
+            } catch (error) {
+                console.error("Error de autenticación:", error);
+                showNotification(`Error: ${error.message}`, 'error');
+                auth.signOut();
+            }
+        }
+
+        function updateUserRoleBadge() {
+            const badge = document.getElementById('userRoleBadge');
+            if (!currentUserRole) {
+                badge.style.display = 'none';
+                return;
+            }
+            
+            badge.style.display = 'inline-block';
+            badge.textContent = currentUserRole.toUpperCase();
+            
+            // Estilos según el rol
+            if (currentUserRole === 'admin') {
+                badge.style.backgroundColor = '#2ecc71';
+                badge.style.color = 'white';
+            } else if (currentUserRole === 'approver') {
+                badge.style.backgroundColor = '#3498db';
+                badge.style.color = 'white';
+            } else if (currentUserRole === 'reviewer') {
+                badge.style.backgroundColor = '#f39c12';
+                badge.style.color = 'white';
+            }
+        }
+
+        function logout() {
+            if (unsavedChanges && !confirm('Tienes cambios sin guardar. ¿Seguro que quieres salir?')) {
+                return;
+            }
+            auth.signOut().then(() => {
+                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('appContainer').style.display = 'none';
+                if (unsubscribeFileStates) unsubscribeFileStates();
+                showNotification('Sesión cerrada correctamente');
+            });
+        }
+
+        // Verificación de permisos
+        function checkPermission(requiredRole) {
+            if (!currentUserRole) return false;
+            if (currentUserRole === 'admin') return true;
+            return currentUserRole === requiredRole;
+        }
+
+        async function initApp() {
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('userEmail').textContent = auth.currentUser.email;
+            
+            setupFirestoreListener();
+            testFirestoreConnection();
+            
+            // Precargar conexión a Firestore
+            db.collection('fileStates').limit(1).get();
+            
+            // Cargar estados iniciales desde Firebase
+            if (currentDirectoryFiles.length > 0) {
+                await loadInitialFileStates();
+            }
+            
+            // Configurar responsive design
+            if (window.innerWidth < 768) {
+                document.getElementById('mobileFilterBtn').style.display = 'block';
+                document.querySelector('.filter-buttons').style.display = 'none';
+            }
+        }
+
+        // Filtrar carpetas según el rol del usuario
+        function filterFoldersByRole() {
+            const folders = document.querySelectorAll('.folder');
+            
+            folders.forEach(folder => {
+                const files = folder.querySelectorAll('.file-item');
+                let hasRelevantFiles = false;
+                
+                files.forEach(file => {
+                    const showFile = shouldShowFileBasedOnRole(file);
+                    file.style.display = showFile ? 'flex' : 'none';
+                    if (showFile) hasRelevantFiles = true;
+                });
+                
+                // Mostrar/ocultar carpeta basado en si tiene archivos relevantes
+                folder.style.display = hasRelevantFiles ? 'block' : 'none';
+                
+                // Actualizar el contador de archivos en el resumen de la carpeta
+                if (hasRelevantFiles) {
+                    const visibleFiles = Array.from(files).filter(f => f.style.display !== 'none');
+                    const reviewedCount = visibleFiles.filter(f => 
+                        f.querySelector('.review-checkbox').checked).length;
+                    const approvedCount = visibleFiles.filter(f => 
+                        f.querySelector('.approve-checkbox').checked).length;
+                    
+                    const summaryElement = folder.querySelector('.folder-summary');
+                    if (summaryElement) {
+                        summaryElement.textContent = 
+                            `${reviewedCount}/${visibleFiles.length} revisados | ${approvedCount}/${visibleFiles.length} aprobados`;
+                    }
+                }
+            });
+            
+            // Ocultar años que no tengan carpetas visibles
+            document.querySelectorAll('.year-group').forEach(yearGroup => {
+                const hasVisibleFolders = Array.from(yearGroup.querySelectorAll('.folder'))
+                    .some(folder => folder.style.display !== 'none');
+                
+                yearGroup.style.display = hasVisibleFolders ? 'block' : 'none';
+            });
+        }
+
+        function shouldShowFileBasedOnRole(fileElement) {
+            if (!currentUserRole) return false;
+            
+            const isReviewed = fileElement.querySelector('.review-checkbox').checked;
+            const isApproved = fileElement.querySelector('.approve-checkbox').checked;
+            
+            // Admin ve todo
+            if (currentUserRole === 'admin') return true;
+            
+            // Revisor ve solo archivos no revisados o que él haya revisado
+            if (currentUserRole === 'reviewer') {
+                return !isReviewed || 
+                       (fileElement.querySelector('.file-meta')?.textContent.includes(auth.currentUser.email));
+            }
+            
+            // Aprobador ve solo archivos revisados pero no aprobados, o que él haya aprobado
+            if (currentUserRole === 'approver') {
+                return isReviewed && (!isApproved || 
+                       (fileElement.querySelector('.file-meta')?.textContent.includes(auth.currentUser.email)));
+            }
+            
+            return false;
+        }
+
+        async function loadInitialFileStates() {
+            try {
+                document.getElementById('loadingIndicator').style.display = 'inline-block';
+                document.getElementById('foldersContainer').classList.add('skeleton');
+                
+                const snapshot = await db.collection('fileStates').get();
+                const filesInDOM = Array.from(document.querySelectorAll('[data-file-path]'))
+                    .map(el => el.dataset.filePath);
+                
+                let updatesCount = 0;
+                
+                snapshot.forEach(doc => {
+                    const fileState = doc.data();
+                    const filePath = fileState.originalPath;
+                    
+                    if (filesInDOM.includes(filePath)) {
+                        updateFileUI(doc.id, fileState);
+                        updatesCount++;
+                    }
+                });
+                
+                document.querySelectorAll('.folder').forEach(folder => {
+                    updateFolderStatus(folder);
+                });
+                
+                updateGlobalProgress();
+                filterFoldersByRole(); // Aplicar filtro por rol después de cargar los estados
+                
+                console.log(`Estados cargados: ${updatesCount} archivos actualizados`);
+                
+            } catch (error) {
+                console.error("Error al cargar estados iniciales:", error);
+                showNotification("Error al cargar los estados de revisión", 'error');
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('foldersContainer').classList.remove('skeleton');
+            }
+        }
+
+        function setupFirestoreListener() {
+            unsubscribeFileStates = db.collection('fileStates')
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type !== 'added') {
+                            const filePath = change.doc.data().originalPath;
+                            if (!localChanges[filePath]) {
+                                updateFileUI(change.doc.id, change.doc.data());
+                            }
+                        }
+                    });
+                    
+                    // Reaplicar filtros después de actualizar estados
+                    filterFoldersByRole();
+                    filterByStatus(currentFilterStatus);
+                    
+                }, error => {
+                    console.error("Error en listener:", error);
+                    showNotification("Error de conexión con la base de datos", 'error');
+                });
+        }
+
+        async function testFirestoreConnection() {
+            try {
+                await db.collection('test').doc('connection').get();
+                console.log("Conexión a Firestore exitosa");
+            } catch (error) {
+                console.error("Error de conexión a Firestore:", error);
+                showNotification("Error de conexión con la base de datos", 'error');
+            }
+        }
+
+        // Configurar el input de directorio
+        document.getElementById('directoryInput').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (!files || files.length === 0) return;
+            
+            currentDirectoryFiles = files;
+            showNotification(`✅ ${files.length} archivos cargados`);
+            
+            // Procesar archivos
+            processFiles(currentDirectoryFiles);
+            
+            // Actualizar interfaz
+            const dirBtn = document.getElementById('directoryBtn');
+            dirBtn.textContent = '🔄 Actualizar';
+            dirBtn.onclick = function() {
+                document.getElementById('directoryInput').click();
+            };
+            
+            // Cargar estados iniciales desde Firebase
+            loadInitialFileStates();
+        });
+
+        // Función para procesar archivos y agrupar por año, carpeta de 23 dígitos y última carpeta
+        function processFiles(files) {
+            const foldersContainer = document.getElementById('foldersContainer');
+            foldersContainer.innerHTML = '';
+            
+            if (!files || files.length === 0) {
+                console.error("No se seleccionaron archivos");
+                return;
+            }
+
+            // Nueva estructura: { año: { carpeta23dígitos: { últimaCarpeta: [archivos] } } }
+            const yearStructure = {};
+            
+            files.forEach(file => {
+                if (!file.webkitRelativePath) {
+                    console.warn("Archivo sin path:", file.name);
+                    return;
+                }
+                
+                const pathParts = file.webkitRelativePath.split('/');
+                const fileName = pathParts.pop();
+                
+                // Buscar año (carpeta de 4 dígitos), carpeta de 23 dígitos y última carpeta
+                let year = 'Otros';
+                let targetFolder = 'Sin clasificar';
+                let lastFolder = 'Sin subcarpeta';
+                
+                pathParts.forEach(part => {
+                    if (/^\d{4}$/.test(part)) {
+                        year = part;
+                    } else if (/^\d{23}$/.test(part)) {
+                        targetFolder = part;
+                    } else if (part !== '') { // La última carpeta que no sea vacía
+                        lastFolder = part;
+                    }
+                });
+                
+                if (!yearStructure[year]) {
+                    yearStructure[year] = {};
+                }
+                if (!yearStructure[year][targetFolder]) {
+                    yearStructure[year][targetFolder] = {};
+                }
+                if (!yearStructure[year][targetFolder][lastFolder]) {
+                    yearStructure[year][targetFolder][lastFolder] = [];
+                }
+                
+                yearStructure[year][targetFolder][lastFolder].push({
+                    name: fileName,
+                    path: file.webkitRelativePath
+                });
+            });
+            
+            if (Object.keys(yearStructure).length === 0) {
+                console.error("No se encontraron archivos válidos");
+                showNotification("No se encontraron archivos válidos en la carpeta seleccionada", 'error');
+                return;
+            }
+            
+            // Renderizar por año > carpeta-23-dígitos > última-carpeta > archivos
+            Object.entries(yearStructure).forEach(([year, folders]) => {
+                const yearElement = document.createElement('div');
+                yearElement.className = 'year-group';
+                
+                // Contar total de carpetas para este año
+                const totalFolders = Object.keys(folders).length;
+                
+                yearElement.innerHTML = `
+                    <div class="year-header" onclick="toggleYear(this)">
+                        <span>📅 Año ${year}</span>
+                        <span class="year-summary">${totalFolders} ${totalFolders === 1 ? 'carpeta' : 'carpetas'}</span>
+                    </div>
+                    <div class="year-content" style="display:none;">
+                        ${Object.entries(folders).map(([folder23digits, lastFolders]) => `
+                            <div class="folder folder-23digits">
+                                ${renderFolderHeader({ name: folder23digits, files: Object.values(lastFolders).flat() })}
+                                <div class="folder-files">
+                                    ${Object.entries(lastFolders).map(([lastFolderName, files]) => `
+                                        <div class="folder last-folder">
+                                            ${renderFolderHeader({ name: lastFolderName, files })}
+                                            <div class="folder-files">
+                                                ${files.map(file => renderFileItem(file)).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Añadir eventos para desplegar carpetas
+                yearElement.querySelectorAll('.folder-header-main').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const filesSection = this.closest('.folder').querySelector('.folder-files');
+                        filesSection.style.display = filesSection.style.display === 'none' ? 'block' : 'none';
+                    });
+                });
+                
+                foldersContainer.appendChild(yearElement);
+            });
+        }
+        
+        // Alternar visibilidad del contenido del año
+        function toggleYear(element) {
+            const content = element.nextElementSibling;
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function renderFolderHeader(folder) {
+            const canReview = checkPermission('reviewer') || checkPermission('approver') || checkPermission('admin');
+            const canApprove = checkPermission('approver') || checkPermission('admin');
+            
+            return `
+                <div class="folder-header">
+                    <div class="folder-header-main">
+                        <span class="folder-name">${folder.name} ${/^\d{23}$/.test(folder.name) ? ' (23 dígitos)' : ''}</span>
+                        <span class="folder-summary">0/${folder.files.length} revisados | 0/${folder.files.length} aprobados</span>
+                    </div>
+                    <div class="folder-actions">
+                        ${canReview ? `
+                        <label class="folder-checkbox-label">
+                            <input type="checkbox" class="folder-review-all" 
+                                onchange="toggleAllFiles(this, 'reviewed', '${folder.name}')">
+                            <span>Revisar todo</span>
+                        </label>` : ''}
+                        
+                        ${canApprove ? `
+                        <label class="folder-checkbox-label">
+                            <input type="checkbox" class="folder-approve-all" 
+                                onchange="toggleAllFiles(this, 'approved', '${folder.name}')"
+                                disabled>
+                            <span>Aprobar todo</span>
+                        </label>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderFileItem(file) {
+            const canReview = checkPermission('reviewer') || checkPermission('approver') || checkPermission('admin');
+            const canApprove = checkPermission('approver') || checkPermission('admin');
+            
+            return `
+                <div class="file-item">
+                    <input type="checkbox" class="status-checkbox review-checkbox" 
+                        data-file-path="${file.path}"
+                        onchange="updateFileState('${file.path}', 'reviewed', this.checked)"
+                        ${canReview ? '' : 'disabled'}>
+                    <input type="checkbox" class="status-checkbox approve-checkbox" 
+                        data-file-path="${file.path}"
+                        onchange="updateFileState('${file.path}', 'approved', this.checked)"
+                        ${canApprove ? '' : 'disabled'}>
+                    <div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-meta"></div>
+                    </div>
+                    <span class="file-status status-pending">PENDIENTE</span>
+                    ${!canReview && !canApprove ? '<div class="no-permission">No tienes permisos</div>' : ''}
+                </div>
+            `;
+        }
+        
+        function toggleAllFiles(checkbox, actionType, folderName) {
+            const isChecked = checkbox.checked;
+            const folderElement = checkbox.closest('.folder');
+            const fileItems = folderElement.querySelectorAll('.file-item');
+            
+            fileItems.forEach(item => {
+                if (item.style.display === 'none') return; // Saltar archivos ocultos
+                
+                const path = item.querySelector('[data-file-path]').dataset.filePath;
+                const reviewCheckbox = item.querySelector('.review-checkbox');
+                const approveCheckbox = item.querySelector('.approve-checkbox');
+                
+                if (actionType === 'reviewed') {
+                    if (!reviewCheckbox.disabled) {
+                        reviewCheckbox.checked = isChecked;
+                        updateFileState(path, 'reviewed', isChecked, true);
+                    }
+                } 
+                else if (actionType === 'approved') {
+                    if (!approveCheckbox.disabled && reviewCheckbox.checked) {
+                        approveCheckbox.checked = isChecked;
+                        updateFileState(path, 'approved', isChecked, true);
+                    }
+                }
+            });
+            
+            // Actualizar estado de los checkboxes "Aprobar todo"
+            if (actionType === 'reviewed') {
+                const approveAllCheckbox = folderElement.querySelector('.folder-approve-all');
+                const allReviewed = Array.from(fileItems).every(item => 
+                    item.style.display === 'none' || item.querySelector('.review-checkbox').checked
+                );
+                approveAllCheckbox.disabled = !allReviewed;
+                if (!allReviewed && approveAllCheckbox.checked) {
+                    approveAllCheckbox.checked = false;
+                    toggleAllFiles(approveAllCheckbox, 'approved', folderName);
+                }
+            }
+            
+            updateGlobalProgress();
+        }
+        
+        function updateFileState(filePath, stateType, isChecked, silent = false) {
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("Usuario no autenticado");
+                
+                const fileElement = document.querySelector(`[data-file-path="${filePath}"]`).closest('.file-item');
+                const reviewCheckbox = fileElement.querySelector('.review-checkbox');
+                const approveCheckbox = fileElement.querySelector('.approve-checkbox');
+
+                if ((stateType === 'reviewed' && !checkPermission('reviewer')) || 
+                    (stateType === 'approved' && !checkPermission('approver'))) {
+                    return;
+                }
+
+                if (!localChanges[filePath]) {
+                    localChanges[filePath] = {};
+                }
+
+                if (stateType === 'reviewed') {
+                    localChanges[filePath]['reviewed'] = isChecked;
+                    localChanges[filePath]['reviewedBy'] = isChecked ? user.email : null;
+                    
+                    if (!isChecked) {
+                        localChanges[filePath]['approved'] = false;
+                        localChanges[filePath]['approvedBy'] = null;
+                        approveCheckbox.checked = false;
+                    }
+                    
+                    approveCheckbox.disabled = !isChecked;
+                }
+                
+                if (stateType === 'approved' && isChecked) {
+                    localChanges[filePath]['reviewed'] = true;
+                    localChanges[filePath]['reviewedBy'] = user.email;
+                    reviewCheckbox.checked = true;
+                    
+                    localChanges[filePath]['approved'] = true;
+                    localChanges[filePath]['approvedBy'] = user.email;
+                    
+                    reviewCheckbox.disabled = true;
+                    approveCheckbox.disabled = true;
+                }
+
+                localChanges[filePath]['lastUpdated'] = new Date();
+                unsavedChanges = true;
+                document.getElementById('saveBtn').disabled = false;
+                
+                if (!silent) {
+                    updateFileUI(filePath);
+                    updateFolderStatus(fileElement.closest('.folder'));
+                } else {
+                    updateFolderStatus(fileElement.closest('.folder'));
+                }
+
+                updateGlobalProgress();
+
+            } catch (error) {
+                console.error("Error al actualizar estado:", error);
+                showNotification(`Error: ${error.message}`, 'error');
+                
+                const checkbox = document.querySelector(`[data-file-path="${filePath}"].${stateType}-checkbox`);
+                if (checkbox) checkbox.checked = !isChecked;
+            }
+        }
+        
+        function updateFileUI(docId, fileState) {
+            try {
+                let filePath, state;
+                
+                if (fileState) {
+                    filePath = fileState.originalPath;
+                    state = fileState;
+                } else {
+                    filePath = docId;
+                    state = localChanges[filePath];
+                    if (!state) return;
+                }
+                
+                const fileElement = document.querySelector(`[data-file-path="${filePath}"]`)?.closest('.file-item');
+                if (!fileElement) return;
+                
+                const reviewCheckbox = fileElement.querySelector('.review-checkbox');
+                const approveCheckbox = fileElement.querySelector('.approve-checkbox');
+                
+                reviewCheckbox.checked = state.reviewed || false;
+                approveCheckbox.checked = state.approved || false;
+                
+                const canReview = checkPermission('reviewer') || checkPermission('approver') || checkPermission('admin');
+                const canApprove = checkPermission('approver') || checkPermission('admin');
+                
+                approveCheckbox.disabled = !state.reviewed || !canApprove;
+                
+                if (state.approved) {
+                    reviewCheckbox.disabled = true;
+                    approveCheckbox.disabled = true;
+                } else {
+                    reviewCheckbox.disabled = !canReview;
+                }
+                
+                const statusElement = fileElement.querySelector('.file-status');
+                if (state.approved) {
+                    statusElement.className = 'file-status status-approved';
+                    statusElement.textContent = 'APROBADO';
+                } else if (state.reviewed) {
+                    statusElement.className = 'file-status status-reviewed';
+                    statusElement.textContent = 'REVISADO';
+                } else {
+                    statusElement.className = 'file-status status-pending';
+                    statusElement.textContent = 'PENDIENTE';
+                }
+                
+                const metaElement = fileElement.querySelector('.file-meta');
+                if (metaElement) {
+                    metaElement.innerHTML = `
+                        ${state.reviewedBy ? `Revisado por: ${state.reviewedBy}<br>` : ''}
+                        ${state.approvedBy ? `Aprobado por: ${state.approvedBy}<br>` : ''}
+                        ${state.lastUpdated ? `Últ. actualización: ${new Date(state.lastUpdated).toLocaleString()}` : ''}
+                    `;
+                }
+                
+            } catch (error) {
+                console.error("Error al actualizar UI:", error);
+            }
+        }
+        
+        function updateFolderStatus(folderElement) {
+            const fileItems = folderElement.querySelectorAll('.file-item');
+            let reviewed = 0;
+            let approved = 0;
+            let totalVisible = 0;
+            
+            fileItems.forEach(item => {
+                if (item.style.display === 'none') return;
+                totalVisible++;
+                if (item.querySelector('.review-checkbox').checked) reviewed++;
+                if (item.querySelector('.approve-checkbox').checked) approved++;
+            });
+            
+            const isCompleted = totalVisible > 0 && reviewed === totalVisible && approved === totalVisible;
+            const hasProgress = reviewed > 0 || approved > 0;
+            
+            const reviewAllCheckbox = folderElement.querySelector('.folder-review-all');
+            const approveAllCheckbox = folderElement.querySelector('.folder-approve-all');
+            
+            if (reviewAllCheckbox) {
+                reviewAllCheckbox.checked = reviewed === totalVisible && totalVisible > 0;
+                reviewAllCheckbox.indeterminate = reviewed > 0 && reviewed < totalVisible;
+            }
+            
+            if (approveAllCheckbox) {
+                approveAllCheckbox.checked = approved === totalVisible && totalVisible > 0;
+                approveAllCheckbox.indeterminate = approved > 0 && approved < totalVisible;
+                approveAllCheckbox.disabled = reviewed !== totalVisible;
+            }
+            
+            const summaryElement = folderElement.querySelector('.folder-summary');
+            if (summaryElement) {
+                summaryElement.textContent = `${reviewed}/${totalVisible} revisados | ${approved}/${totalVisible} aprobados`;
+            }
+            
+            folderElement.classList.remove('folder-completed', 'folder-incomplete', 'folder-pending');
+            if (isCompleted) {
+                folderElement.classList.add('folder-completed');
+            } else if (hasProgress) {
+                folderElement.classList.add('folder-incomplete');
+            } else {
+                folderElement.classList.add('folder-pending');
+            }
+        }
+        
+        async function saveAllChanges() {
+            try {
+                const user = auth.currentUser;
+                if (!user) throw new Error("Usuario no autenticado");
+                
+                if (Object.keys(localChanges).length === 0) {
+                    showNotification("No hay cambios para guardar", 'info');
+                    return;
+                }
+                
+                document.getElementById('saveBtn').disabled = true;
+                const saveBtnText = document.getElementById('saveBtn').innerHTML;
+                document.getElementById('saveBtn').innerHTML = '<span class="loading"></span> Guardando...';
+                
+                const batch = db.batch();
+                
+                Object.entries(localChanges).forEach(([filePath, changes]) => {
+                    const docId = btoa(encodeURIComponent(filePath)).replace(/=/g, '');
+                    const docRef = db.collection('fileStates').doc(docId);
+                    
+                    const updateData = {
+                        ...changes,
+                        originalPath: filePath,
+                        userUID: user.uid,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    batch.set(docRef, updateData, { merge: true });
+                });
+                
+                await batch.commit();
+                localChanges = {};
+                unsavedChanges = false;
+                document.getElementById('saveBtn').innerHTML = saveBtnText;
+                
+                showNotification("Todos los cambios han sido guardados exitosamente");
+                updateGlobalProgress();
+                
+            } catch (error) {
+                console.error("Error al guardar cambios:", error);
+                document.getElementById('saveBtn').disabled = false;
+                showNotification(`Error al guardar: ${error.message}`, 'error');
+            }
+        }
+        
+        function updateGlobalProgress() {
+            const folders = document.querySelectorAll('.folder');
+            let totalFiles = 0, totalReviewed = 0, totalApproved = 0;
+            
+            folders.forEach(folder => {
+                const files = folder.querySelectorAll('.file-item');
+                files.forEach(file => {
+                    if (file.style.display === 'none') return;
+                    totalFiles++;
+                    if (file.querySelector('.review-checkbox').checked) totalReviewed++;
+                    if (file.querySelector('.approve-checkbox').checked) totalApproved++;
+                });
+            });
+            
+            const reviewedPercent = totalFiles ? Math.round((totalReviewed / totalFiles) * 100) : 0;
+            const approvedPercent = totalFiles ? Math.round((totalApproved / totalFiles) * 100) : 0;
+            
+            document.getElementById('totalReviewed').textContent = `${reviewedPercent}%`;
+            document.getElementById('totalApproved').textContent = `${approvedPercent}%`;
+            document.getElementById('reviewedBar').style.width = `${reviewedPercent}%`;
+            document.getElementById('approvedBar').style.width = `${approvedPercent}%`;
+        }
+        
+        function filterFolders(searchText) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = searchText.toLowerCase().trim();
+                let hasResults = false;
+                
+                document.querySelectorAll('.year-group').forEach(yearGroup => {
+                    const yearHeader = yearGroup.querySelector('.year-header span:first-child').textContent.toLowerCase();
+                    let yearMatch = yearHeader.includes(searchTerm);
+                    let folderMatch = false;
+                    let fileMatch = false;
+                    
+                    // Buscar en carpetas y archivos dentro de este año
+                    yearGroup.querySelectorAll('.folder').forEach(folder => {
+                        const folderName = folder.querySelector('.folder-name').textContent.toLowerCase();
+                        folderMatch = folderName.includes(searchTerm);
+                        
+                        // Buscar en archivos
+                        folder.querySelectorAll('.file-name').forEach(file => {
+                            if (file.textContent.toLowerCase().includes(searchTerm)) {
+                                fileMatch = true;
+                                // Resaltar coincidencia
+                                const originalText = file.textContent;
+                                const regex = new RegExp(searchTerm, 'gi');
+                                file.innerHTML = originalText.replace(regex, match => 
+                                    `<span style="background-color: #fff59d;">${match}</span>`);
+                            }
+                        });
+                        
+                        // Mostrar/ocultar carpeta según coincidencias
+                        if (folderMatch || fileMatch) {
+                            folder.style.display = 'block';
+                            if (fileMatch) {
+                                folder.querySelector('.folder-files').style.display = 'block';
+                            }
+                        } else {
+                            folder.style.display = 'none';
+                        }
+                    });
+                    
+                    // Mostrar/ocultar año según coincidencias
+                    if (yearMatch || folderMatch || fileMatch) {
+                        yearGroup.style.display = 'block';
+                        hasResults = true;
+                        // Expandir año si hay coincidencias
+                        if (folderMatch || fileMatch) {
+                            yearGroup.querySelector('.year-content').style.display = 'block';
+                        }
+                    } else {
+                        yearGroup.style.display = 'none';
+                    }
+                });
+                
+                document.getElementById('noResultsMessage').style.display = hasResults || searchTerm === '' ? 'none' : 'block';
+            }, 300);
+        }
+        
+       function filterByStatus(status, skipYearCheck = false) {
+    currentFilterStatus = status;
+    
+    // Actualizar botones de filtro de estado
+    document.querySelectorAll('.filter-buttons button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`filter${status.charAt(0).toUpperCase() + status.slice(1)}`).classList.add('active');
+    
+    // Aplicar filtro solo a los años visibles
+    document.querySelectorAll('.folder').forEach(folder => {
+        if (!skipYearCheck && folder.closest('.year-group')?.style.display === 'none') return;
+        
+        let hasVisibleFiles = false;
+        const fileItems = folder.querySelectorAll('.file-item');
+        
+        fileItems.forEach(item => {
+            const isReviewed = item.querySelector('.review-checkbox').checked;
+            const isApproved = item.querySelector('.approve-checkbox').checked;
+            let showFile = true;
+            
+            if (status === 'pending') showFile = !isReviewed && !isApproved;
+            else if (status === 'reviewed') showFile = isReviewed && !isApproved;
+            else if (status === 'approved') showFile = isApproved;
+            
+            item.style.display = showFile ? 'flex' : 'none';
+            if (showFile) hasVisibleFiles = true;
+        });
+        
+        folder.style.display = hasVisibleFiles ? 'block' : 'none';
+    });
+    
+    updateGlobalProgress();
+}
+        
+        function sortFolders(criteria) {
+            const container = document.getElementById('foldersContainer');
+            const yearGroups = Array.from(container.querySelectorAll('.year-group'));
+            
+            yearGroups.sort((a, b) => {
+                const yearA = a.querySelector('.year-header span:first-child').textContent;
+                const yearB = b.querySelector('.year-header span:first-child').textContent;
+                
+                if (criteria === 'name') {
+                    return yearA.localeCompare(yearB);
+                } else {
+                    const progressA = getYearProgress(a);
+                    const progressB = getYearProgress(b);
+                    return criteria === 'reviewed' 
+                        ? progressB.reviewedPercent - progressA.reviewedPercent 
+                        : progressB.approvedPercent - progressA.approvedPercent;
+                }
+            });
+            
+            // Reinsertar en el orden correcto
+            yearGroups.forEach(group => container.appendChild(group));
+        }
+        
+        function getYearProgress(yearElement) {
+            const folders = yearElement.querySelectorAll('.folder');
+            let totalFiles = 0, reviewed = 0, approved = 0;
+            
+            folders.forEach(folder => {
+                const files = folder.querySelectorAll('.file-item');
+                files.forEach(file => {
+                    if (file.style.display === 'none') return;
+                    totalFiles++;
+                    if (file.querySelector('.review-checkbox').checked) reviewed++;
+                    if (file.querySelector('.approve-checkbox').checked) approved++;
+                });
+            });
+            
+            return {
+                reviewed,
+                approved,
+                reviewedPercent: totalFiles ? Math.round((reviewed / totalFiles) * 100) : 0,
+                approvedPercent: totalFiles ? Math.round((approved / totalFiles) * 100) : 0
+            };
+        }
+        
+        function exportToCSV() {
+            let csvContent = "Año,Carpeta,Archivo,Revisado,Revisor,Aprobado,Aprobador,Última Actualización,Ruta Completa\n";
+            
+            document.querySelectorAll('.year-group').forEach(yearGroup => {
+                if (yearGroup.style.display === 'none') return;
+                
+                const year = yearGroup.querySelector('.year-header span:first-child').textContent.replace('Año ', '');
+                
+                yearGroup.querySelectorAll('.folder').forEach(folder => {
+                    if (folder.style.display === 'none') return;
+                    
+                    const folderName = folder.querySelector('.folder-name').textContent;
+                    
+                    folder.querySelectorAll('.file-item').forEach(item => {
+                        if (item.style.display === 'none') return;
+                        
+                        const filePath = item.querySelector('[data-file-path]').dataset.filePath;
+                        const fileName = item.querySelector('.file-name').textContent;
+                        const reviewed = item.querySelector('.review-checkbox').checked ? 'Sí' : 'No';
+                        const reviewedBy = item.querySelector('.file-meta')?.textContent.includes('Revisado por:') 
+                            ? item.querySelector('.file-meta').textContent.split('Revisado por:')[1].split('\n')[0].trim()
+                            : '';
+                        const approved = item.querySelector('.approve-checkbox').checked ? 'Sí' : 'No';
+                        const approvedBy = item.querySelector('.file-meta')?.textContent.includes('Aprobado por:') 
+                            ? item.querySelector('.file-meta').textContent.split('Aprobado por:')[1].split('\n')[0].trim()
+                            : '';
+                        const lastUpdated = item.querySelector('.file-meta')?.textContent.includes('Últ. actualización:') 
+                            ? item.querySelector('.file-meta').textContent.split('Últ. actualización:')[1].trim()
+                            : '';
+                        
+                        csvContent += `"${year}","${folderName}","${fileName}","${reviewed}","${reviewedBy}","${approved}","${approvedBy}","${lastUpdated}","${filePath}"\n`;
+                    });
+                });
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `revision_documentos_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+            showNotification("Exportación a CSV completada");
+        }
+
+        // Listener de autenticación
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                console.log("Usuario detectado:", user.email);
+                db.collection('users').doc(user.email).get().then(doc => {
+                    if (doc.exists) {
+                        currentUserRole = doc.data().role;
+                        updateUserRoleBadge();
+                        initApp();
+                        
+                        // Mostrar solo las carpetas relevantes según el rol
+                        filterFoldersByRole();
+                    } else {
+                        showNotification("No tienes asignado un rol. Contacta al administrador.", 'error');
+                        auth.signOut();
+                    }
+                }).catch(error => {
+                    console.error("Error al verificar rol:", error);
+                    showNotification("Error al verificar permisos", 'error');
+                });
+            } else {
+                console.log("No hay usuario autenticado");
+                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('appContainer').style.display = 'none';
+            }
+        });
+
+        // Advertencia al salir con cambios sin guardar
+        window.addEventListener('beforeunload', (e) => {
+            if (unsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'Tienes cambios sin guardar. ¿Seguro que quieres salir?';
+                return e.returnValue;
+            }
+        });
+
+        // Precargar Firebase al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            if (auth.currentUser) {
+                db.collection('fileStates').limit(1).get();
+            }
+        });
+/* ========== FILTRADO POR AÑO - VERSIÓN CORREGIDA ========== */
+let currentSelectedYear = 'all';
+
+function initializeYearFilters() {
+    const container = document.getElementById('yearButtonsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Extraer años únicos de las carpetas existentes
+    const years = new Set();
+    document.querySelectorAll('.year-group').forEach(group => {
+        const yearText = group.querySelector('.year-header span:first-child').textContent;
+        const yearMatch = yearText.match(/Año (\d{4})/) || yearText.match(/\d{4}/);
+        if (yearMatch) years.add(yearMatch[1] || yearMatch[0]);
+    });
+    
+    // Crear botón "Todos"
+    const allButton = document.createElement('button');
+    allButton.className = `year-btn ${currentSelectedYear === 'all' ? 'active' : ''}`;
+    allButton.textContent = 'Todos';
+    allButton.onclick = () => {
+        currentSelectedYear = 'all';
+        applyYearFilter();
+    };
+    container.appendChild(allButton);
+    
+    // Crear botones para cada año (orden descendente)
+    Array.from(years).sort((a, b) => b - a).forEach(year => {
+        const btn = document.createElement('button');
+        btn.className = `year-btn ${currentSelectedYear === year ? 'active' : ''}`;
+        btn.textContent = year;
+        btn.onclick = () => {
+            currentSelectedYear = year;
+            applyYearFilter();
+        };
+        container.appendChild(btn);
+    });
+}
+
+function applyYearFilter() {
+    // Actualizar estado visual de los botones
+    document.querySelectorAll('.year-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent === currentSelectedYear || 
+            (currentSelectedYear === 'all' && btn.textContent === 'Todos')) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Aplicar filtro a los grupos de año
+    document.querySelectorAll('.year-group').forEach(group => {
+        const groupYear = group.querySelector('.year-header span:first-child').textContent;
+        const shouldShow = currentSelectedYear === 'all' || groupYear.includes(currentSelectedYear);
+        group.style.display = shouldShow ? 'block' : 'none';
+        
+        // Aplicar filtro de estado dentro del año seleccionado
+        if (shouldShow && currentFilterStatus) {
+            filterByStatus(currentFilterStatus, true);
+        }
+    });
+}
+
+// Modificar el event listener del input de directorio
+document.getElementById('directoryInput').addEventListener('change', function() {
+    setTimeout(() => {
+        initializeYearFilters();
+        currentSelectedYear = 'all'; // Resetear a "Todos" al cargar nuevo directorio
+        applyYearFilter();
+        filterByStatus('pending'); // Filtra pendientes al cargar
+    }, 300);
+});
+
+// Inicializar al cargar la página si ya hay datos
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('.year-group')) {
+        initializeYearFilters();
+        applyYearFilter();
+        filterByStatus('pending');
+    }
+});
+    </script>
+</body>
+</html>
